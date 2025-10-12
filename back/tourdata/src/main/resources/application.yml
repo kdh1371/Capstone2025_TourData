@@ -1,0 +1,7 @@
+spring:
+  application:
+    name:tourdata
+
+tourapi:
+  base-url: http://apis.data.go.kr/B551011/KorService2
+  service-key: foaeyo4HlBdjlaovuw5lvTacBgTL4SdZHvN4JM9VzEc2G3wQQWA7VeJqJQOShX%2B%2BsTyG6k5e%2FDp7h5m9sOeRng%3D%3D
