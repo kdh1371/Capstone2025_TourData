@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+
 @Service
 @RequiredArgsConstructor
 public class TourDetailService {
@@ -17,12 +19,18 @@ public class TourDetailService {
     private String baseUrl;
 
     public Object detailTour(Long contentId) {
-        String url = baseUrl + "/detailCommon2"
-                + "?serviceKey=" + serviceKey
-                + "&MobileOS=WEB&MobileApp=TourApp&_type=json"
-                + "&contentId=" + contentId;
+        try {
+            String url = baseUrl + "/detailCommon2"
+                    + "?serviceKey=" + serviceKey
+                    + "&MobileOS=WEB&MobileApp=TourApp&_type=json"
+                    + "&contentId=" + contentId;
 
-        return restTemplate.getForObject(url, Object.class);
+            URI uri = new URI(url);
+            return restTemplate.getForObject(uri, Object.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException("API 요청 중 오류 발생: " + e.getMessage(), e);
+        }
     }
 
 }

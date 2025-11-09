@@ -29,6 +29,9 @@ dependencies {
 
 	testCompileOnly 'org.projectlombok:lombok:1.18.32'
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+	implementation 'mysql:mysql-connector-java:8.0.29'  // MySQL Connector 의존성
+
 }
 
 tasks.named('test') {

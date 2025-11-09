@@ -20,8 +20,11 @@ public class TourController {
     private final TourMapService tourMapService;
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchTour(@RequestParam String keyword, @RequestParam Integer areaCode) {
-        return ResponseEntity.ok(tourKeywordSearchService.searchTour(keyword, areaCode));
+    public ResponseEntity<?> searchTour(@RequestParam String keyword,
+                                        @RequestParam(required = false) Integer areaCode,
+                                        @RequestParam(required = false) Integer pageNo,
+                                        @RequestParam(required = false) Integer numOfRows) {
+        return ResponseEntity.ok(tourKeywordSearchService.searchTour(keyword, areaCode, pageNo, numOfRows));
     }
 
     @GetMapping("/detail")

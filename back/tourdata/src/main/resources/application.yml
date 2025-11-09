@@ -1,7 +1,18 @@
 spring:
-  application:
-    name:tourdata
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3307/travelplanner?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: root123
+
+  jpa:
+    hibernate:
+      ddl-auto: update   # 개발 중엔 update, 운영 시 validate 권장
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
 tourapi:
-  base-url: http://apis.data.go.kr/B551011/KorService2
+  base-url: https://apis.data.go.kr/B551011/KorService2
   service-key: foaeyo4HlBdjlaovuw5lvTacBgTL4SdZHvN4JM9VzEc2G3wQQWA7VeJqJQOShX%2B%2BsTyG6k5e%2FDp7h5m9sOeRng%3D%3D
