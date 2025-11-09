@@ -1,15 +1,15 @@
+// src/pages/HomePage.jsx
 import { useState } from "react";
 import { Search, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
   const [keyword, setKeyword] = useState("");
-  const [sigunguCode, setSigunguCode] = useState(""); // 선택된 지역 코드
-  const [sigunguName, setSigunguName] = useState("전체"); // 버튼에 표시될 지역명
-  const [openRegion, setOpenRegion] = useState(false); // 레이어 열림/닫힘 상태
+  const [sigunguCode, setSigunguCode] = useState(""); // areaCode로 보낼 값
+  const [sigunguName, setSigunguName] = useState("전체");
+  const [openRegion, setOpenRegion] = useState(false);
   const navigate = useNavigate();
 
-  // 지역 목록 (예시 데이터)
   const regions = [
     { code: "", name: "전체" },
     { code: "1", name: "서울" },
@@ -20,12 +20,11 @@ export default function HomePage() {
 
   const handleSearch = () => {
     if (!keyword.trim() && !sigunguCode) return;
-
-    let url = `/search?keyword=${encodeURIComponent(keyword)}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-
-    navigate(url);
-    setKeyword("");
+    const params = new URLSearchParams();
+    if (keyword.trim()) params.set("keyword", keyword.trim());
+    if (sigunguCode) params.set("areaCode", sigunguCode);
+    navigate(`/search?${params.toString()}`);
+    // 검색 후 인풋 초기화는 UX에 따라 유지/제거 가능
   };
 
   const handleEnter = (e) => {
@@ -34,11 +33,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-
-      {/* 검색창 + 지역 선택 */}
       <div className="p-4 bg-gray-100">
         <div className="flex gap-2 relative w-full">
-          {/* 지역 선택 버튼 */}
           <div className="relative">
             <button
               onClick={() => setOpenRegion(!openRegion)}
@@ -76,7 +72,6 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* 검색창 */}
           <div className="relative flex-1">
             <input
               type="search"
@@ -96,9 +91,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 메인 콘텐츠 */}
       <main className="p-4 space-y-6 flex-1 overflow-auto">
-
         <div>
           <h2 className="text-lg font-semibold mb-2">공지사항</h2>
           <ul className="space-y-2">

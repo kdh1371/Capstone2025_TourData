@@ -1,122 +1,123 @@
-import { useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
-// 가짜 API 응답 시뮬레이션
-function fakeFetch(keyword, sigunguCode = "", page = 1, numOfRows = 10) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const totalCount = 53; // 전체 검색 결과 개수 (예시)
-      const data = Array.from({ length: numOfRows }, (_, i) => {
-        const contentid = (page - 1) * numOfRows + i + 1;
-        return {
-          contentid,
-          title: `${keyword} (${sigunguCode || "전체"}) 결과 ${contentid}`,
-        };
-      });
-
-      resolve({
-        resultCode: "0000",
-        resultMsg: "OK",
-        numOfRows,
-        pageNo: page,
-        totalCount,
-        items: data,
-      });
-    }, 500);
-  });
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
 }
 
 export default function SearchResultsPage() {
-  const [keyword, setKeyword] = useState("");
+  const query = useQuery();
+  const navigate = useNavigate();
+
+  const initialKeyword = query.get("keyword") || "";
+  const initialArea = query.get("areaCode") || "";
+  const initialPage = parseInt(query.get("page") || "1", 10);
+
+  const [keyword, setKeyword] = useState(initialKeyword);
+  const [sigunguCode, setSigunguCode] = useState(initialArea);
   const [results, setResults] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const numOfRows = 10;
 
-  // 지역 선택 상태
-  const [sigunguCode, setSigunguCode] = useState("");
-  const [sigunguName, setSigunguName] = useState("전체");
-  const [openRegion, setOpenRegion] = useState(false);
-
-  const regions = [
-    { code: "", name: "전체" },
-    { code: "1", name: "서울" },
-    { code: "2", name: "부산" },
-    { code: "3", name: "대구" },
-    { code: "4", name: "인천" },
-  ];
-
-  const handleSearch = async (pageNo = 1) => {
-    if (!keyword.trim()) return;
-    const res = await fakeFetch(keyword, sigunguCode, pageNo, numOfRows);
-
-    if (res.resultCode === "0000") {
-      setResults(res.items);
-      setTotalCount(res.totalCount);
-      setPage(res.pageNo);
+  useEffect(() => {
+    if (initialKeyword) {
+      fetchData(initialKeyword, initialArea, initialPage);
     }
+  }, [initialKeyword, initialArea, initialPage]);
+
+  const fetchData = async (keywordParam, areaCodeParam, pageNo = 1) => {
+    try {
+      const params = {
+        keyword: keywordParam,
+        pageNo,
+        numOfRows,
+      };
+      if (areaCodeParam) params.areaCode = areaCodeParam;
+
+      const resp = await api.get("/api/tour/search", { params });
+      const data = resp.data;
+
+      const items =
+        data?.items ||
+        data?.response?.body?.items?.item ||
+        [];
+      const total =
+        data?.totalCount ||
+        data?.response?.body?.totalCount ||
+        0;
+
+      setResults(Array.isArray(items) ? items : []);
+      setTotalCount(total);
+      setPage(pageNo);
+    } catch (err) {
+      console.error("검색 중 에러:", err);
+      navigate("/error", { state: { message: err.message || "검색 중 오류가 발생했습니다." } });
+    }
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (keyword.trim()) params.set("keyword", keyword.trim());
+    if (sigunguCode) params.set("areaCode", sigunguCode);
+    params.set("page", "1");
+    navigate(`/search?${params.toString()}`);
+  };
+
+  const handleEnter = (e) => {
+    if (e.key === "Enter") handleSearch();
   };
 
   const totalPages = Math.ceil(totalCount / numOfRows);
 
+  // ✅ 페이지네이션 계산
+  const blockSize = 10; // 한 번에 보여줄 페이지 버튼 개수
+  const currentBlock = Math.ceil(page / blockSize);
+  const startPage = (currentBlock - 1) * blockSize + 1;
+  const endPage = Math.min(startPage + blockSize - 1, totalPages);
+
+  const goToPage = (p) => {
+    const params = new URLSearchParams();
+    params.set("keyword", keyword);
+    if (sigunguCode) params.set("areaCode", sigunguCode);
+    params.set("page", String(p));
+    navigate(`/search?${params.toString()}`);
+  };
+
+  const goPrevBlock = () => {
+    if (startPage > 1) goToPage(startPage - 1);
+  };
+
+  const goNextBlock = () => {
+    if (endPage < totalPages) goToPage(endPage + 1);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* 검색창 + 지역 선택 */}
+      {/* 검색창 */}
       <div className="p-4 bg-gray-100">
         <div className="flex gap-2 relative w-full">
-          {/* 지역 선택 버튼 */}
           <div className="relative">
-            <button
-              onClick={() => setOpenRegion(!openRegion)}
-              className="h-12 px-4 border border-gray-300 rounded bg-white flex items-center gap-1"
-            >
-              {sigunguName}
-              <ChevronDown className="w-4 h-4" />
+            <button className="h-12 px-4 border border-gray-300 rounded bg-white flex items-center gap-1">
+              {sigunguCode || "전체"}
             </button>
-
-            {openRegion && (
-              <ul className="absolute z-10 mt-1 w-40 bg-white border rounded shadow">
-                {regions.map((region) => (
-                  <li key={region.code}>
-                    <label
-                      htmlFor={region.code || "all"}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        id={region.code || "all"}
-                        name="sigungu"
-                        value={region.code}
-                        checked={sigunguCode === region.code}
-                        onChange={() => {
-                          setSigunguCode(region.code);
-                          setSigunguName(region.name);
-                          setOpenRegion(false);
-                        }}
-                      />
-                      {region.name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
 
-          {/* 검색창 */}
           <div className="relative flex-1">
             <input
               type="search"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="검색어를 입력하세요"
-              onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
+              onKeyDown={handleEnter}
               className="w-full pr-14 pl-4 h-12 text-base border border-gray-300 rounded focus:outline-none"
             />
             <button
-              onClick={() => handleSearch(1)}
+              onClick={handleSearch}
               className="absolute inset-y-0 right-0 w-12 flex items-center justify-center border-l border-gray-300 rounded-r bg-gray-200"
             >
-              <Search className="w-5 h-5" />
+              검색
             </button>
           </div>
         </div>
@@ -126,30 +127,71 @@ export default function SearchResultsPage() {
       <main className="p-4 flex-1 overflow-auto">
         {totalCount > 0 && (
           <p className="mb-4 text-gray-700">
-            "{keyword}" ({sigunguName})에 관한 검색결과 {totalCount}건이 있습니다.
+            "{initialKeyword}" ({sigunguCode || "전체"}) 검색결과 {totalCount}건
           </p>
         )}
 
-        <ul className="space-y-2">
-          {results.map((item) => (
-            <li key={item.contentid}>
-              <a
-                href={`/detail/${item.contentid}`}
-                className="block p-2 rounded hover:bg-gray-100 text-blue-600"
+        <ul className="space-y-3">
+          {results.map((item, idx) => {
+            const id = item.contentid || idx;
+            const title = item.title || "제목 없음";
+            const addr = item.addr1 || "주소 없음";
+            const image = item.firstimage || item.firstimage2 || null;
+
+            return (
+              <li
+                key={id}
+                className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition"
               >
-                {item.title}
-              </a>
-            </li>
-          ))}
+                {image ? (
+                  <img src={image} alt={title} className="w-24 h-24 object-cover rounded-lg border" />
+                ) : (
+                  <div className="w-24 h-24 flex items-center justify-center bg-gray-100 text-gray-400 rounded-lg border">
+                    이미지 없음
+                  </div>
+                )}
+                <div className="flex-1">
+                  <a
+                    href={`/detail/${id}`}
+                    className="block text-lg font-semibold text-blue-600 hover:underline"
+                  >
+                    {title}
+                  </a>
+                  <p className="text-sm text-gray-600 mt-1">{addr}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
 
-        {/* 페이지네이션 */}
+        {/* ✅ 페이지네이션 */}
         {totalPages > 1 && (
-          <div className="flex gap-2 mt-6 flex-wrap">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          <div className="flex gap-1 mt-6 flex-wrap justify-center">
+            {/* << 버튼 */}
+            {startPage > 1 && (
+              <button
+                onClick={() => goToPage(1)}
+                className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
+              >
+                {"<<"}
+              </button>
+            )}
+
+            {/* < 버튼 */}
+            {page > 1 && (
+              <button
+                onClick={goPrevBlock}
+                className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
+              >
+                {"<"}
+              </button>
+            )}
+
+            {/* 페이지 번호 */}
+            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((p) => (
               <button
                 key={p}
-                onClick={() => handleSearch(p)}
+                onClick={() => goToPage(p)}
                 className={`px-3 py-1 rounded border ${
                   p === page
                     ? "bg-blue-500 text-white"
@@ -159,6 +201,26 @@ export default function SearchResultsPage() {
                 {p}
               </button>
             ))}
+
+            {/* > 버튼 */}
+            {page < totalPages && (
+              <button
+                onClick={goNextBlock}
+                className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
+              >
+                {">"}
+              </button>
+            )}
+
+            {/* >> 버튼 */}
+            {endPage < totalPages && (
+              <button
+                onClick={() => goToPage(totalPages)}
+                className="px-2 py-1 border rounded bg-white hover:bg-gray-100"
+              >
+                {">>"}
+              </button>
+            )}
           </div>
         )}
       </main>
